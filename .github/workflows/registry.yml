@@ -1,0 +1,54 @@
+name: registry
+
+# Publishes the server to the MCP registry. The release workflow calls it after the NuGet push. Run it by hand
+# (Actions > registry > Run workflow, from master) to publish a version that is already on NuGet, for example when
+# the registry step failed or was added after the release.
+#
+# It publishes the version in src/SqlAnywhereMcp/.mcp/server.json, so check out the ref you want released. The
+# registry refuses a version it already has, so re-running after a success fails.
+#
+# Authentication is GitHub OIDC: the name io.github.Dwarf1er/... is only allowed for repositories of that owner,
+# and no secret is stored.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to the MCP registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write # lets mcp-publisher log in with the job's OIDC token
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read the version
+        id: v
+        run: |
+          set -euo pipefail
+          version=$(jq -r '.packages[0].version' src/SqlAnywhereMcp/.mcp/server.json)
+          scripts/check-version.sh "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The registry reads the package's README from nuget.org, which lists it a few minutes after the push.
+      - name: Wait for NuGet to list the package
+        run: scripts/wait-for-nuget.sh SqlAnywhereMcp "${{ steps.v.outputs.version }}"
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz -C "$RUNNER_TEMP" mcp-publisher
+
+      - name: Validate server.json
+        run: $RUNNER_TEMP/mcp-publisher validate src/SqlAnywhereMcp/.mcp/server.json
+
+      - name: Log in to the registry
+        run: $RUNNER_TEMP/mcp-publisher login github-oidc
+
+      - name: Publish
+        run: $RUNNER_TEMP/mcp-publisher publish src/SqlAnywhereMcp/.mcp/server.json

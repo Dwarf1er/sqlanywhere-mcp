@@ -1,7 +1,7 @@
 name: release
 
 # Push a tag like v0.2.0 (or v0.2.0-rc.1 for a prerelease) to test, build the binaries for every platform, publish
-# a GitHub release and push the NuGet packages. The tag must match the version in SqlAnywhereMcp.csproj and in
+# a GitHub release, push the NuGet packages and publish the server to the MCP registry (registry.yml). The tag must match the version in SqlAnywhereMcp.csproj and in
 # .mcp/server.json (scripts/check-version.sh), so bump all three in one commit before tagging.
 #
 # "Run workflow" (workflow_dispatch) does everything except publish, to dry-run the pipeline from a branch.
@@ -236,3 +236,12 @@ jobs:
           for package in $platform $main; do
             dotnet nuget push "$package" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
           done
+
+  registry:
+    name: MCP registry
+    needs: [meta, nuget]
+    if: needs.meta.outputs.publish == 'true'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/registry.yml
