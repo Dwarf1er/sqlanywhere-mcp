@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="sqlanywhere-mcp">
+  <title>sqlanywhere-mcp</title>
+  <rect width="1280" height="640" fill="#06080C"/>
+  <rect x="28" y="28" width="1224" height="584" rx="28" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="2"/>
+  <g transform="translate(110 120) scale(6.25)">
+    <rect width="64" height="64" rx="14" fill="#0D1117" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="0.4"/>
+
+  <!-- Three stacked discs: a database. Drawn bottom to top; the dark strokes are the gaps between them. -->
+  <g stroke="#0D1117" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M14 38 V46 A18 6.5 0 0 0 50 46 V38 Z" fill="#C9D1DE"/>
+    <ellipse cx="32" cy="38" rx="18" ry="6.5" fill="#E6EAF2"/>
+    <path d="M14 28 V36 A18 6.5 0 0 0 50 36 V28 Z" fill="#C9D1DE"/>
+    <ellipse cx="32" cy="28" rx="18" ry="6.5" fill="#E6EAF2"/>
+    <path d="M14 18 V26 A18 6.5 0 0 0 50 26 V18 Z" fill="#C9D1DE"/>
+    <ellipse cx="32" cy="18" rx="18" ry="6.5" fill="#F7F9FC"/>
+  </g>
+
+  <!-- A lightning bolt through the stack; its dark outline cuts it out of the discs. -->
+  <path d="M37.5 11 L24.5 34 H31.5 L27.5 53 L40.5 29.5 H33.5 Z" fill="#FFB800" stroke="#0D1117" stroke-width="2.2" stroke-linejoin="round" paint-order="stroke"/>
+  </g>
+  <g font-family="Inter, 'Segoe UI', 'Noto Sans', 'DejaVu Sans', sans-serif">
+    <text x="556" y="316" font-size="72" font-weight="700" fill="#F0F3F8" letter-spacing="-1">sqlanywhere-mcp</text>
+    <rect x="558" y="346" width="132" height="6" rx="3" fill="#FFB800"/>
+    <text x="556" y="408" font-size="34" fill="#8B96A8">MCP server for SAP SQL Anywhere 17</text>
+  </g>
+</svg>
