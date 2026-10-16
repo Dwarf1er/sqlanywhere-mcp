@@ -29,6 +29,7 @@
     <PackageTags>mcp;model-context-protocol;mcp-server;sql-anywhere;sqlanywhere;sybase;odbc;database</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/Dwarf1er/sqlanywhere-mcp</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Dwarf1er/sqlanywhere-mcp</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -38,6 +39,7 @@
     <None Include=".mcp\server.json" Pack="true" PackagePath="/.mcp/" />
     <None Include="..\..\README.md" Pack="true" PackagePath="/" />
     <None Include="..\..\LICENSE" Pack="true" PackagePath="/" />
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="/" />
   </ItemGroup>
 
   <ItemGroup>
