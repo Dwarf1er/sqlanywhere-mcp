@@ -33,11 +33,12 @@
     <PackageProjectUrl>https://github.com/Dwarf1er/sqlanywhere-mcp</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Dwarf1er/sqlanywhere-mcp</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <NuGetReadmePath>$(MSBuildProjectDirectory)\obj\nuget-readme\README.md</NuGetReadmePath>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include=".mcp\server.json" Pack="true" PackagePath="/.mcp/" />
-    <None Include="..\..\README.md" Pack="true" PackagePath="/" />
+    <None Include="$(NuGetReadmePath)" Pack="true" PackagePath="/" />
     <None Include="..\..\LICENSE" Pack="true" PackagePath="/" />
     <None Include="..\..\assets\icon.png" Pack="true" PackagePath="/" />
   </ItemGroup>
@@ -51,4 +52,42 @@
   <ItemGroup>
     <InternalsVisibleTo Include="SqlAnywhereMcp.Tests" />
   </ItemGroup>
+
+  <!-- nuget.org renders only Markdown, so the centered HTML header of the repository README would show up as
+       text. The package gets the same README with that header replaced by a plain title. -->
+  <UsingTask
+    TaskName="MakeNuGetReadme"
+    TaskFactory="RoslynCodeTaskFactory"
+    AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll"
+  >
+    <ParameterGroup>
+      <Source ParameterType="System.String" Required="true" />
+      <Destination ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Text.RegularExpressions" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+        var text = File.ReadAllText(Source);
+        var header = "# sqlanywhere-mcp\n\nMCP server for SAP SQL Anywhere 17\n\n";
+        var result = Regex.Replace(text, @"<div align=""center"">.*?</div>\s*", header, RegexOptions.Singleline);
+        if (result == text)
+        {
+            Log.LogError("README.md has no <div align=\"center\"> header to replace for the NuGet package.");
+            return false;
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(Destination));
+        File.WriteAllText(Destination, result);
+      ]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="MakeNuGetReadme" BeforeTargets="_GetPackageFiles">
+    <MakeNuGetReadme
+      Source="$(MSBuildThisFileDirectory)..\..\README.md"
+      Destination="$(NuGetReadmePath)"
+    />
+  </Target>
 </Project>
