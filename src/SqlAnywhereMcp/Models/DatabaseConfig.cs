@@ -32,8 +32,24 @@ public sealed record DatabaseConfig
     {
         var port = Port ?? ConnectionDefaults.DefaultPort;
         var host = port > 0 ? $"{Host}:{port}" : Host;
+        var driver = Driver ?? ConnectionDefaults.DefaultDriver;
         var conn =
-            $"Driver={{{Driver ?? ConnectionDefaults.DefaultDriver}}};Host={host};DBN={Database};UID={Username};PWD={password}";
-        return string.IsNullOrEmpty(AppInfo) ? conn : $"{conn};AppInfo={AppInfo}";
+            $"Driver={{{driver.Replace("}", "}}")}}};Host={Quote(host)};DBN={Quote(Database)};UID={Quote(Username ?? string.Empty)};PWD={Quote(password)}";
+        return string.IsNullOrEmpty(AppInfo) ? conn : $"{conn};AppInfo={Quote(AppInfo)}";
     }
+
+    /// <summary>
+    /// Encloses a connection string value in braces when it holds a character that would otherwise end or
+    /// change it (<c>;</c>, <c>{</c>, <c>}</c>, <c>=</c>) or has leading or trailing spaces, doubling any
+    /// closing brace inside. Other values are left as they are.
+    /// </summary>
+    internal static string Quote(string value) =>
+        value.Length > 0
+        && (
+            value.IndexOfAny([';', '{', '}', '=']) >= 0
+            || char.IsWhiteSpace(value[0])
+            || char.IsWhiteSpace(value[^1])
+        )
+            ? "{" + value.Replace("}", "}}") + "}"
+            : value;
 }
