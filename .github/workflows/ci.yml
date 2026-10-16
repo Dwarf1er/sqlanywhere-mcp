@@ -88,3 +88,19 @@ jobs:
           version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/SqlAnywhereMcp/SqlAnywhereMcp.csproj)
           dotnet tool install SqlAnywhereMcp --tool-path "$RUNNER_TEMP/tool" --add-source dist --version "$version"
           scripts/smoke.sh "$RUNNER_TEMP/tool/sqlanywhere-mcp" "$version"
+
+  plugin:
+    name: Claude Code plugin files
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the plugin files
+        run: |
+          set -euo pipefail
+          jq empty .claude-plugin/marketplace.json plugin/.claude-plugin/plugin.json plugin/.mcp.json
+          # A marketplace entry whose name differs from the plugin's own name can't be installed by that name.
+          [ "$(jq -r '.plugins[0].name' .claude-plugin/marketplace.json)" = "$(jq -r '.name' plugin/.claude-plugin/plugin.json)" ]
+          # The plugin must run the package this project publishes.
+          package=$(sed -n 's:.*<PackageId>\(.*\)</PackageId>.*:\1:p' src/SqlAnywhereMcp/SqlAnywhereMcp.csproj)
+          [ "$(jq -r '.mcpServers.sqlanywhere.args[0]' plugin/.mcp.json)" = "$package" ]
