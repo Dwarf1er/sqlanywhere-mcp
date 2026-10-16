@@ -106,3 +106,18 @@ jobs:
           # The plugin must run the package this project publishes.
           package=$(sed -n 's:.*<PackageId>\(.*\)</PackageId>.*:\1:p' src/SqlAnywhereMcp/SqlAnywhereMcp.csproj)
           [ "$(jq -r '.mcpServers.sqlanywhere.args[0]' plugin/.mcp.json)" = "$package" ]
+
+  server-json:
+    name: Registry metadata
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # The registry has its own limits (a description of at most 100 characters, for one), so check the file
+      # against it before a release finds out.
+      - name: Validate server.json
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz -C "$RUNNER_TEMP" mcp-publisher
+          "$RUNNER_TEMP/mcp-publisher" validate src/SqlAnywhereMcp/.mcp/server.json
