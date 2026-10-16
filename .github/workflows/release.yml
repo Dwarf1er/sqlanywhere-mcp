@@ -1,10 +1,12 @@
 name: release
 
 # Push a tag like v0.2.0 (or v0.2.0-rc.1 for a prerelease) to test, build the binaries for every platform, publish
-# a GitHub release, push the NuGet packages and publish the server to the MCP registry (registry.yml). The tag must match the version in SqlAnywhereMcp.csproj and in
+# a GitHub release, push the NuGet packages and publish the server to the MCP registry. The tag must match the version in SqlAnywhereMcp.csproj and in
 # .mcp/server.json (scripts/check-version.sh), so bump all three in one commit before tagging.
 #
-# "Run workflow" (workflow_dispatch) does everything except publish, to dry-run the pipeline from a branch.
+# "Run workflow" (workflow_dispatch) does everything except publish, to dry-run the pipeline from a branch. If a
+# publishing job fails, use "Re-run failed jobs" on the run: NuGet pushes skip versions that are already there, but
+# the registry refuses a version it already has, so don't re-run the registry job after it succeeded.
 #
 # Pushing to NuGet uses trusted publishing (OIDC): no API key is stored. It needs
 #   - a trusted publishing policy on nuget.org for this repository, the workflow file release.yml and the
@@ -237,11 +239,34 @@ jobs:
             dotnet nuget push "$package" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
           done
 
+  # Authentication is GitHub OIDC: the name io.github.Dwarf1er/... is only allowed for repositories of that owner,
+  # and no secret is stored.
   registry:
     name: MCP registry
     needs: [meta, nuget]
     if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
-      id-token: write
+      id-token: write # lets mcp-publisher log in with the job's OIDC token
       contents: read
-    uses: ./.github/workflows/registry.yml
+    steps:
+      - uses: actions/checkout@v7
+
+      # The registry reads the package's README from nuget.org, which lists it a few minutes after the push.
+      - name: Wait for NuGet to list the package
+        run: scripts/wait-for-nuget.sh SqlAnywhereMcp "${{ needs.meta.outputs.version }}"
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" \
+            | tar xz -C "$RUNNER_TEMP" mcp-publisher
+
+      - name: Validate server.json
+        run: $RUNNER_TEMP/mcp-publisher validate src/SqlAnywhereMcp/.mcp/server.json
+
+      - name: Log in to the registry
+        run: $RUNNER_TEMP/mcp-publisher login github-oidc
+
+      - name: Publish
+        run: $RUNNER_TEMP/mcp-publisher publish src/SqlAnywhereMcp/.mcp/server.json
