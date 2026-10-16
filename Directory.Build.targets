@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <ToolsMarkerFile>$(MSBuildThisFileDirectory).tools-restored</ToolsMarkerFile>
+  </PropertyGroup>
+
+  <Target
+    Name="RestoreLocalTools"
+    BeforeTargets="Restore;Build"
+    Inputs="$(MSBuildThisFileDirectory)dotnet-tools.json"
+    Outputs="$(ToolsMarkerFile)"
+  >
+    <Message Importance="high" Text="Running dotnet tool restore..." />
+    <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildThisFileDirectory)" />
+    <Touch Files="$(ToolsMarkerFile)" AlwaysCreate="true" />
+  </Target>
+</Project>
