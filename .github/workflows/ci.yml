@@ -82,6 +82,8 @@ jobs:
           done
           unzip -p "$main" README.md | grep -q 'mcp-name: io.github.Dwarf1er/sqlanywhere-mcp' \
             || { echo "::error::the package README has no mcp-name line"; exit 1; }
+          # nuget.org renders only Markdown, so the HTML header of the repository README must not be in the package.
+          if unzip -p "$main" README.md | grep -q '<div'; then echo "::error::the package README still has HTML"; exit 1; fi
       - name: Install the tool from the package and smoke test it
         run: |
           set -euo pipefail
