@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Dwarf1er/sqlanywhere-mcp",
+  "description": "MCP server for SAP SQL Anywhere 17: explore schemas, procedures, triggers and views, and run read-only queries.",
+  "repository": {
+    "url": "https://github.com/Dwarf1er/sqlanywhere-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "nuget",
+      "registryBaseUrl": "https://api.nuget.org",
+      "identifier": "SqlAnywhereMcp",
+      "version": "0.1.0",
+      "runtimeHint": "dnx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SQLANYWHERE_MCP_CONFIG",
+          "description": "Path of the config.json file. Defaults to sqlanywhere-mcp/config.json in the user's config directory.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

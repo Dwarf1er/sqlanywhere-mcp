@@ -7,7 +7,38 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DebugType>embedded</DebugType>
+    <Version>0.1.0</Version>
   </PropertyGroup>
+
+  <!-- NuGet package: a dotnet tool that is also an MCP server. `dotnet pack` builds one self-contained,
+       single-file package per runtime identifier plus a main package that points at them, so
+       `dnx SqlAnywhereMcp` needs no .NET runtime. The release workflow builds these. -->
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <PackageType>McpServer</PackageType>
+    <ToolCommandName>sqlanywhere-mcp</ToolCommandName>
+    <PackageId>SqlAnywhereMcp</PackageId>
+    <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    <SelfContained>true</SelfContained>
+    <PublishSelfContained>true</PublishSelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+
+    <Description>MCP server for SAP SQL Anywhere 17: explore schemas, procedures, triggers and views, and run read-only queries from an MCP client.</Description>
+    <Authors>Antoine Poulin</Authors>
+    <Copyright>Copyright (c) 2026 Antoine Poulin</Copyright>
+    <PackageTags>mcp;model-context-protocol;mcp-server;sql-anywhere;sqlanywhere;sybase;odbc;database</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/Dwarf1er/sqlanywhere-mcp</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Dwarf1er/sqlanywhere-mcp</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include=".mcp\server.json" Pack="true" PackagePath="/.mcp/" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="/" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="/" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
