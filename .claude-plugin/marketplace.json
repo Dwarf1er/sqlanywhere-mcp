@@ -1,0 +1,16 @@
+{
+  "name": "sqlanywhere-mcp",
+  "description": "Claude Code plugins for SAP SQL Anywhere",
+  "owner": {
+    "name": "Antoine Poulin"
+  },
+  "plugins": [
+    {
+      "name": "sqlanywhere",
+      "source": "./plugin",
+      "description": "Explore SAP SQL Anywhere 17 schemas, procedures, triggers and views, and run read-only queries.",
+      "category": "database",
+      "tags": ["sql-anywhere", "sybase", "database", "mcp"]
+    }
+  ]
+}

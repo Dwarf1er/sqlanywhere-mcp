@@ -1,0 +1,11 @@
+{
+  "name": "sqlanywhere",
+  "description": "MCP server for SAP SQL Anywhere 17: explore schemas, procedures, triggers and views, and run read-only queries.",
+  "author": {
+    "name": "Antoine Poulin"
+  },
+  "homepage": "https://github.com/Dwarf1er/sqlanywhere-mcp",
+  "repository": "https://github.com/Dwarf1er/sqlanywhere-mcp",
+  "license": "MIT",
+  "keywords": ["sql-anywhere", "sybase", "database", "mcp", "odbc"]
+}
