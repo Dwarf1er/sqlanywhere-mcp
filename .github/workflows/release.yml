@@ -1,0 +1,238 @@
+name: release
+
+# Push a tag like v0.2.0 (or v0.2.0-rc.1 for a prerelease) to test, build the binaries for every platform, publish
+# a GitHub release and push the NuGet packages. The tag must match the version in SqlAnywhereMcp.csproj and in
+# .mcp/server.json (scripts/check-version.sh), so bump all three in one commit before tagging.
+#
+# "Run workflow" (workflow_dispatch) does everything except publish, to dry-run the pipeline from a branch.
+#
+# Pushing to NuGet uses trusted publishing (OIDC): no API key is stored. It needs
+#   - a trusted publishing policy on nuget.org for this repository, the workflow file release.yml and the
+#     environment "nuget", with a scope that may publish new packages and versions matching SqlAnywhereMcp*;
+#   - a repository secret NUGET_USER holding the nuget.org username (the profile name, not an email address);
+#   - an environment called "nuget", where you can require a reviewer before anything is pushed.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  meta:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      publish: ${{ steps.v.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # The version always comes from the project file; a tag has to agree with it.
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/SqlAnywhereMcp/SqlAnywhereMcp.csproj)
+          publish=false
+          if [ "$REF_TYPE" = "tag" ]; then
+            publish=true
+            [ "v$version" = "$REF_NAME" ] || { echo "::error::tag $REF_NAME does not match the project version $version"; exit 1; }
+          fi
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$version' is not a valid version (expected e.g. 1.2.3 or 1.2.3-rc.1)"
+            exit 1
+          fi
+          scripts/check-version.sh "$version"
+          prerelease=false
+          [[ "$version" == *-* ]] && prerelease=true
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "Version $version (prerelease=$prerelease, publish=$publish)"
+
+  test:
+    name: Test (${{ matrix.os }})
+    needs: meta
+    timeout-minutes: 15
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test -c Release --blame-hang --blame-hang-timeout 2m
+
+  build:
+    name: Build (${{ matrix.rid }})
+    needs: [meta, test]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: linux-x64,   os: ubuntu-latest,    exe: sqlanywhere-mcp,     archive: tar.gz, smoke: true }
+          - { rid: linux-arm64, os: ubuntu-24.04-arm, exe: sqlanywhere-mcp,     archive: tar.gz, smoke: true }
+          - { rid: osx-arm64,   os: macos-latest,     exe: sqlanywhere-mcp,     archive: tar.gz, smoke: true }
+          # Cross-built on the arm64 runner; the binary can't be run there, so there is no smoke test.
+          - { rid: osx-x64,     os: macos-latest,     exe: sqlanywhere-mcp,     archive: tar.gz, smoke: false }
+          - { rid: win-x64,     os: windows-latest,   exe: sqlanywhere-mcp.exe, archive: zip,    smoke: true }
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      NAME: sqlanywhere-mcp-${{ needs.meta.outputs.version }}-${{ matrix.rid }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish
+        shell: bash
+        run: scripts/publish.sh "${{ matrix.rid }}" "dist/$NAME"
+
+      - name: Smoke test
+        if: matrix.smoke
+        shell: bash
+        run: scripts/smoke.sh "dist/$NAME/${{ matrix.exe }}" "$VERSION"
+
+      # The Intel build can't be run on the arm64 runner, so check what it really is.
+      - name: Verify the macOS architecture
+        if: runner.os == 'macOS'
+        run: |
+          expected=arm64
+          [ "${{ matrix.rid }}" = "osx-x64" ] && expected=x86_64
+          actual=$(lipo -archs "dist/$NAME/sqlanywhere-mcp")
+          echo "${{ matrix.rid }}: expected $expected, binary is $actual"
+          [ "$actual" = "$expected" ]
+
+      - name: Archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        run: tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
+
+      - name: Archive (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: Compress-Archive -Path "dist/$env:NAME" -DestinationPath "dist/$env:NAME.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.NAME }}
+          path: dist/${{ env.NAME }}.${{ matrix.archive }}
+          if-no-files-found: error
+
+  package:
+    name: NuGet packages
+    needs: [meta, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # One package per platform, built self-contained, plus the main package that points at them.
+      - name: Pack
+        run: dotnet pack src/SqlAnywhereMcp -c Release -o dist
+
+      - name: Install the tool from the packages and smoke test it
+        run: |
+          set -euo pipefail
+          ls -l dist
+          dotnet tool install SqlAnywhereMcp --tool-path "$RUNNER_TEMP/tool" --add-source dist --version "$VERSION"
+          scripts/smoke.sh "$RUNNER_TEMP/tool/sqlanywhere-mcp" "$VERSION"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nuget-packages
+          path: dist/*.nupkg
+          if-no-files-found: error
+
+  release:
+    name: GitHub release
+    needs: [meta, build, package]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: sqlanywhere-mcp-*
+          merge-multiple: true
+          path: dist
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum sqlanywhere-mcp-* | tee SHA256SUMS
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.meta.outputs.version }}
+          PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+        run: |
+          args=()
+          [ "$PRERELEASE" = "true" ] && args+=(--prerelease)
+          gh release create "$TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "sqlanywhere-mcp $VERSION" \
+            --generate-notes \
+            "${args[@]}"
+
+  nuget:
+    name: Push to NuGet
+    needs: [meta, release]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      id-token: write # lets the job request the OIDC token that nuget.org exchanges for a short-lived API key
+    steps:
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v8
+        with:
+          name: nuget-packages
+          path: dist
+
+      # The key lasts one hour, so it is requested right before the push.
+      - name: NuGet login (OIDC to a short-lived API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      # The platform packages go first, so the main package never points at something that isn't there yet.
+      # --skip-duplicate lets a failed run be re-run.
+      - name: Push
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+          platform=$(ls dist/SqlAnywhereMcp.*.nupkg | grep -E 'SqlAnywhereMcp\.(win|linux|osx)-' || true)
+          main=$(ls dist/SqlAnywhereMcp.*.nupkg | grep -vE 'SqlAnywhereMcp\.(win|linux|osx)-')
+          for package in $platform $main; do
+            dotnet nuget push "$package" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          done
