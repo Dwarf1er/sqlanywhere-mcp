@@ -35,6 +35,8 @@ MCP (*Model Context Protocol*) server for SQL Anywhere 17. Lets an MCP client su
   - [Database password](#database-password)
     - [Suggested helper: keyturn](#suggested-helper-keyturn)
   - [Claude Code integration](#claude-code-integration)
+    - [As a plugin](#as-a-plugin)
+    - [By hand](#by-hand)
   - [Claude Desktop integration](#claude-desktop-integration)
   - [Multiple databases](#multiple-databases)
   - [Available tools](#available-tools)
@@ -243,6 +245,17 @@ A database with other credentials can point at another secret with its own `pass
 > `config.json` never holds the password: a config with a `password` field is rejected with an error.
 
 ## Claude Code integration
+
+### As a plugin
+
+The repository is also a Claude Code plugin marketplace. The plugin registers the server for you, and runs it with `dnx SqlAnywhereMcp --yes`, so it needs the .NET 10 SDK and always uses the latest published package. It doesn't create your `config.json`: see [Configuration](#configuration).
+
+```bash
+claude plugin marketplace add Dwarf1er/sqlanywhere-mcp
+claude plugin install sqlanywhere@sqlanywhere-mcp
+```
+
+### By hand
 
 The install script prints the exact command at the end of its run. The `--scope user` flag registers the server globally across all projects.
 
