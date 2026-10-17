@@ -273,20 +273,21 @@ claude mcp add --transport stdio --scope user sqlanywhere `
   "C:\Users\<username>\AppData\Local\sqlanywhere-mcp\sqlanywhere-mcp.exe"
 ```
 
-**Claude Code inside WSL2** - there are three options:
+**Claude Code inside WSL2** - this is a special case. The SQL Anywhere driver, the credential helper and the config usually live on Windows, so most WSL2 users run the Windows build from WSL2 through interop, which uses the Windows driver, and stdio works transparently. There are two ways to do that:
 
-- Install and run it as a Linux program inside WSL2, as on Linux above. This needs the Linux SQL Anywhere 17 driver and unixODBC inside WSL2.
-- Launch the Windows executable from the install script through WSL2 interop, which uses the Windows driver. stdio communication works transparently:
-  ```bash
-  claude mcp add --transport stdio --scope user sqlanywhere \
-    /mnt/c/Users/<username>/AppData/Local/sqlanywhere-mcp/sqlanywhere-mcp.exe
-  ```
-- Launch the Windows .NET tool (`dotnet tool install --global SqlAnywhereMcp`, run in Windows). It installs a `sqlanywhere-mcp.cmd` launcher in `%USERPROFILE%\.dotnet\tools`, and WSL2 can't run a `.cmd` file directly, so go through `cmd.exe`:
+- The Windows .NET tool (`dotnet tool install --global SqlAnywhereMcp`, run in Windows). It installs a `sqlanywhere-mcp.cmd` launcher in `%USERPROFILE%\.dotnet\tools`, and WSL2 can't run a `.cmd` file directly, so go through `cmd.exe`:
   ```bash
   claude mcp add --transport stdio --scope user sqlanywhere \
     -- cmd.exe /d /c 'C:\Users\<username>\.dotnet\tools\sqlanywhere-mcp.cmd'
   ```
   Don't point at the executable under `.dotnet\tools\.store\sqlanywheremcp\<version>\`: its path contains the version, so it breaks on every `dotnet tool update`. The `.cmd` launcher keeps working.
+- The executable from the Windows install script, which WSL2 can run directly:
+  ```bash
+  claude mcp add --transport stdio --scope user sqlanywhere \
+    /mnt/c/Users/<username>/AppData/Local/sqlanywhere-mcp/sqlanywhere-mcp.exe
+  ```
+
+Only if you have the Linux SQL Anywhere 17 driver and unixODBC inside WSL2 can you install and run it as a Linux program there instead, exactly as on Linux above.
 
 Restart Claude Code for the configuration to take effect. The MCP server starts automatically when Claude Code launches.
 
