@@ -250,6 +250,8 @@ A database with other credentials can point at another secret with its own `pass
 
 The repository is also a Claude Code plugin marketplace. The plugin registers the server for you, and runs it with `dnx SqlAnywhereMcp --yes`, so it needs the .NET 10 SDK and always uses the latest published package. It doesn't create your `config.json`: see [Configuration](#configuration).
 
+The plugin starts the server on the machine Claude Code runs on. Inside WSL2 that means `dnx` runs in Linux, so WSL2 needs its own .NET 10 SDK and the Linux ODBC driver. To use the Windows install from WSL2, skip the plugin and register the server by hand, as described under [Claude Code inside WSL2](#by-hand).
+
 ```bash
 claude plugin marketplace add Dwarf1er/sqlanywhere-mcp
 claude plugin install sqlanywhere@sqlanywhere-mcp
