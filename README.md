@@ -52,7 +52,7 @@ MCP (*Model Context Protocol*) server for SQL Anywhere 17. Lets an MCP client su
 
 ## Prerequisites
 
-- The **SQL Anywhere 17 ODBC driver**, installed on the machine that runs sqlanywhere-mcp. It comes with the [SQL Anywhere 17](https://www.sap.com/products/technology-platform/sybase-sql-anywhere.html) client or server install, for the platform you run on.
+- The **SQL Anywhere 17 ODBC driver**, installed on the machine that runs sqlanywhere-mcp. It comes with the [SQL Anywhere 17](https://www.sap.com/products/data-cloud/sql-anywhere.html) client or server install, for the platform you run on.
 - On **Linux and macOS**, an ODBC driver manager: [unixODBC](https://www.unixodbc.org/) (for example `apt install unixodbc`, `dnf install unixODBC`, `brew install unixodbc`). On Windows the driver manager is built in.
 - The [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), to build from source.
 - An MCP client, such as [Claude Code](https://claude.ai/code) or Claude Desktop.
